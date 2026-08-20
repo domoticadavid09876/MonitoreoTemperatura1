@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🏥 Monitoreo</title>
+    <title>🏥 Monitor Clínico + Alerta</title>
     
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     
@@ -36,6 +35,7 @@
         .header { text-align: center; margin-bottom: 30px; }
         .header h1 { color: #2d3748; font-size: 28px; font-weight: 700; }
         .header .subtitle { color: #718096; font-size: 14px; margin-top: 5px; }
+        
         .status-bar {
             background: #f7fafc;
             border-radius: 12px;
@@ -69,6 +69,7 @@
             50% { opacity: 0.5; transform: scale(0.8); }
             100% { opacity: 1; transform: scale(1); }
         }
+        
         .sensor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
         .sensor-card {
             background: #f7fafc;
@@ -87,6 +88,8 @@
         .sensor-card.temperatura .value { color: #e53e3e; }
         .sensor-card.humedad { border-left-color: #4299e1; }
         .sensor-card.humedad .value { color: #2b6cb0; }
+
+        /* ===== BOTÓN DE ALERTA ===== */
         .alerta-box {
             background: #fed7d7;
             border: 2px solid #fc8181;
@@ -98,15 +101,55 @@
             gap: 12px;
             animation: shake 0.5s ease-in-out;
         }
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
-        }
         .alerta-box.show { display: flex; }
         .alerta-box .icon { font-size: 28px; }
         .alerta-box .text { color: #c53030; font-weight: 600; font-size: 15px; }
         .alerta-box .detail { color: #9b2c2c; font-size: 13px; margin-top: 2px; }
+
+        /* ===== BOTÓN DE ALERTA SONORA ===== */
+        .btn-alerta {
+            width: 100%;
+            padding: 18px;
+            border: none;
+            border-radius: 15px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            background: #e2e8f0;
+            color: #4a5568;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .btn-alerta:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(0,0,0,0.15); }
+        .btn-alerta:active { transform: scale(0.98); }
+        
+        .btn-alerta.activo {
+            background: #fc8181;
+            color: white;
+            animation: parpadeo 1s infinite;
+            box-shadow: 0 0 30px rgba(252, 129, 129, 0.5);
+        }
+        .btn-alerta.activo:hover { background: #e53e3e; }
+        
+        .btn-alerta.desactivado {
+            background: #48bb78;
+            color: white;
+        }
+        .btn-alerta.desactivado:hover { background: #38a169; }
+
+        @keyframes parpadeo {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .btn-alerta .icono { font-size: 24px; }
+        .btn-alerta .estado-texto { font-size: 14px; font-weight: 400; }
+
         .footer {
             text-align: center;
             color: #a0aec0;
@@ -116,12 +159,14 @@
             border-top: 1px solid #e2e8f0;
         }
         .footer .time { color: #718096; font-weight: 500; }
+
         @media (max-width: 480px) {
             .container { padding: 25px; }
             .sensor-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
             .sensor-card .value { font-size: 22px; }
             .header h1 { font-size: 22px; }
             .sensor-card { padding: 15px 12px; }
+            .btn-alerta { font-size: 16px; padding: 15px; }
         }
     </style>
 </head>
@@ -141,6 +186,7 @@
             <div style="font-size:13px; color:#718096;">🔄 Actualizando...</div>
         </div>
 
+        <!-- Alerta visual -->
         <div class="alerta-box" id="alertaBox">
             <span class="icon">⚠️</span>
             <div>
@@ -149,6 +195,14 @@
             </div>
         </div>
 
+        <!-- BOTÓN DE ALERTA SONORA -->
+        <button class="btn-alerta" id="btnAlerta">
+            <span class="icono">🔊</span>
+            <span>ACTIVAR ALERTA SONORA</span>
+            <span class="estado-texto" id="estadoAlerta">(inactivo)</span>
+        </button>
+
+        <!-- Sensores -->
         <div class="sensor-grid">
             <div class="sensor-card temperatura">
                 <span class="icon">🌡️</span>
@@ -171,7 +225,7 @@
 
     <script>
         // ================================================
-        // CONFIGURACIÓN CORRECTA DE FIREBASE
+        // CONFIGURACIÓN DE FIREBASE
         // ================================================
         const firebaseConfig = {
             apiKey: "AIzaSyB9NdqZlkz7kkylnag-gaKEy-R8ju5VKYw",
@@ -183,10 +237,8 @@
             appId: "1:824517081045:web:e4cb0cedf0a9715ce52f5c"
         };
 
-        console.log("🚀 Iniciando Firebase...");
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
-        console.log("✅ Firebase inicializado");
 
         // ================================================
         // ELEMENTOS HTML
@@ -199,61 +251,50 @@
         const alertaBox = document.getElementById('alertaBox');
         const alertaText = document.getElementById('alertaText');
         const alertaDetail = document.getElementById('alertaDetail');
+        const btnAlerta = document.getElementById('btnAlerta');
+        const estadoAlerta = document.getElementById('estadoAlerta');
 
+        // ================================================
+        // VARIABLES DE CONTROL
+        // ================================================
         const TEMP_MIN = 20;
         const TEMP_MAX = 28;
+        let alertaActiva = false;
 
         // ================================================
         // ESCUCHAR CAMBIOS EN TIEMPO REAL
         // ================================================
         const sensorRef = database.ref('/sensores/actual');
+        const alertaRef = database.ref('/alerta');
+
         console.log("📡 Escuchando en: /sensores/actual");
 
+        // --- ESCUCHAR DATOS DEL SENSOR ---
         sensorRef.on('value', (snapshot) => {
             const data = snapshot.val();
-            console.log("📥 Datos recibidos:", data);
 
             if (data) {
-                // Mostrar temperatura
-                if (data.temperatura !== undefined && data.temperatura !== null) {
-                    tempElement.textContent = data.temperatura.toFixed(1);
-                } else {
-                    tempElement.textContent = '--';
-                }
+                tempElement.textContent = data.temperatura ? data.temperatura.toFixed(1) : '--';
+                humElement.textContent = data.humedad ? data.humedad.toFixed(1) : '--';
 
-                // Mostrar humedad
-                if (data.humedad !== undefined && data.humedad !== null) {
-                    humElement.textContent = data.humedad.toFixed(1);
-                } else {
-                    humElement.textContent = '--';
-                }
-
-                // Actualizar timestamp
                 const now = new Date();
                 lastUpdate.textContent = now.toLocaleTimeString();
 
-                // Estado: online
                 statusDot.className = 'status-dot online';
                 statusText.textContent = '✅ Conectado';
                 statusText.style.color = '#48bb78';
 
-                // Verificar alertas
+                // Verificar alertas automáticas
                 const temp = data.temperatura;
                 if (temp !== undefined && temp !== null) {
                     if (temp > TEMP_MAX) {
                         alertaBox.className = 'alerta-box show';
                         alertaText.textContent = `🔥 ¡Temperatura Alta! ${temp.toFixed(1)}°C`;
                         alertaDetail.textContent = '⚠️ Revisa el sistema de climatización';
-                        statusDot.className = 'status-dot alerta';
-                        statusText.textContent = '⚠️ ALERTA';
-                        statusText.style.color = '#ed8936';
                     } else if (temp < TEMP_MIN) {
                         alertaBox.className = 'alerta-box show';
                         alertaText.textContent = `❄️ ¡Temperatura Baja! ${temp.toFixed(1)}°C`;
                         alertaDetail.textContent = '⚠️ Revisa el sistema de calefacción';
-                        statusDot.className = 'status-dot alerta';
-                        statusText.textContent = '⚠️ ALERTA';
-                        statusText.style.color = '#ed8936';
                     } else {
                         alertaBox.className = 'alerta-box';
                     }
@@ -266,17 +307,50 @@
                 tempElement.textContent = '--';
                 humElement.textContent = '--';
                 alertaBox.className = 'alerta-box';
-                console.log("⚠️ No hay datos en Firebase");
             }
-        }, (error) => {
-            console.error('❌ Error al leer datos:', error);
-            statusDot.className = 'status-dot offline';
-            statusText.textContent = '❌ Error de conexión';
-            statusText.style.color = '#fc8181';
+        });
+
+        // --- ESCUCHAR ESTADO DE LA ALERTA SONORA ---
+        alertaRef.child('activa').on('value', (snapshot) => {
+            const estado = snapshot.val();
+            alertaActiva = estado === true;
+
+            if (alertaActiva) {
+                btnAlerta.className = 'btn-alerta activo';
+                estadoAlerta.textContent = '🔊 ACTIVADO';
+                btnAlerta.innerHTML = `
+                    <span class="icono">🔇</span>
+                    <span>DESACTIVAR ALERTA SONORA</span>
+                    <span class="estado-texto" id="estadoAlerta">🔊 ACTIVADO</span>
+                `;
+            } else {
+                btnAlerta.className = 'btn-alerta';
+                estadoAlerta.textContent = '(inactivo)';
+                btnAlerta.innerHTML = `
+                    <span class="icono">🔊</span>
+                    <span>ACTIVAR ALERTA SONORA</span>
+                    <span class="estado-texto" id="estadoAlerta">(inactivo)</span>
+                `;
+            }
         });
 
         // ================================================
-        // DETECTAR SI ESP32 ESTÁ OFFLINE
+        // EVENTO DEL BOTÓN
+        // ================================================
+        btnAlerta.addEventListener('click', () => {
+            // Cambiar estado en Firebase
+            const nuevoEstado = !alertaActiva;
+            alertaRef.set({ activa: nuevoEstado })
+                .then(() => {
+                    console.log(`✅ Alerta ${nuevoEstado ? 'activada' : 'desactivada'}`);
+                })
+                .catch((error) => {
+                    console.error('❌ Error al cambiar estado:', error);
+                });
+        });
+
+        // ================================================
+        // DETECTAR ESP32 OFFLINE
         // ================================================
         let timeoutId = setTimeout(() => {
             if (tempElement.textContent === '--') {
@@ -299,6 +373,7 @@
 
         console.log('✅ Monitor Web Iniciado!');
         console.log('📡 Conectado a: monitoreo-b8e27');
+        console.log('🔊 Escuchando alerta en: /alerta/activa');
     </script>
 
 </body>
