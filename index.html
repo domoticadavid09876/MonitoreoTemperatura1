@@ -12,6 +12,7 @@
     </script>
 
     <style>
+        /* ===== ESTILOS MODERNOS ===== */
         * {
             margin: 0;
             padding: 0;
@@ -110,6 +111,7 @@
             margin-left: 2px;
         }
 
+        /* Colores personalizados por tarjeta */
         .card.temp .value {
             color: #ff6b6b;
         }
@@ -174,6 +176,7 @@
             }
         }
 
+        /* Responsive */
         @media (max-width: 480px) {
             .dashboard {
                 padding: 25px 18px;
@@ -201,6 +204,7 @@
         <h1>🏥 Monitor <span>Clínico</span></h1>
         <p class="subtitle">DHT22 · Temperatura &amp; Humedad</p>
 
+        <!-- Tarjetas -->
         <div class="grid">
             <div class="card temp">
                 <span class="icon">🌡️</span>
@@ -214,6 +218,7 @@
             </div>
         </div>
 
+        <!-- Barra de estado -->
         <div class="status-bar">
             <div class="status">
                 <span class="dot online" id="statusDot"></span>
@@ -225,7 +230,7 @@
 
     <script>
         // =============================================
-        // CONFIGURACIÓN DE FIREBASE (TUS CREDENCIALES)
+        // 1. CONFIGURACIÓN DE FIREBASE
         // =============================================
         const firebaseConfig = {
             apiKey: "AIzaSyB9NdqZlkz7kkylnag-gaKEy-R8ju5VKYw",
@@ -233,29 +238,38 @@
             databaseURL: "https://monitoreo-b8e27-default-rtdb.firebaseio.com",
             projectId: "monitoreo-b8e27",
             storageBucket: "monitoreo-b8e27.firebasestorage.app",
-            messagingSenderId: "824517081045",
-            appId: "1:824517081045:web:e4cb0cedf0a9715ce52f5c"
+            messagingSenderId: "TU_MESSAGING_SENDER_ID", // ← RELLENA ESTO
+            appId: "1:XXXXXXXXXX:web:XXXXXXXXXXXXX" // ← RELLENA ESTO
         };
 
-        // INICIALIZAR FIREBASE
+        // =============================================
+        // 2. INICIALIZAR FIREBASE
+        // =============================================
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // REFERENCIA A LOS DATOS
+        // =============================================
+        // 3. REFERENCIA A LOS DATOS
+        // =============================================
         const sensorRef = db.ref('/sensores/actual');
 
-        // ELEMENTOS HTML
+        // =============================================
+        // 4. ELEMENTOS HTML
+        // =============================================
         const tempEl = document.getElementById('tempValue');
         const humEl = document.getElementById('humValue');
         const timeEl = document.getElementById('timestamp');
         const statusDot = document.getElementById('statusDot');
         const statusText = document.getElementById('statusText');
 
-        // ESCUCHAR CAMBIOS EN TIEMPO REAL
+        // =============================================
+        // 5. ESCUCHAR CAMBIOS EN TIEMPO REAL
+        // =============================================
         sensorRef.on('value', (snapshot) => {
             const data = snapshot.val();
 
             if (data) {
+                // Actualizar valores
                 const temp = data.temperatura;
                 const hum = data.humedad;
                 const ts = data.timestamp;
@@ -268,6 +282,7 @@
                     hum.toFixed(1) + '<span class="unit">%</span>' :
                     '--<span class="unit">%</span>';
 
+                // Actualizar timestamp
                 if (ts) {
                     const date = new Date(ts * 1000);
                     timeEl.textContent = '🕒 ' + date.toLocaleString('es-ES', {
@@ -282,20 +297,26 @@
                     timeEl.textContent = '🕒 ' + new Date().toLocaleString();
                 }
 
+                // Estado: online
                 statusDot.className = 'dot online';
                 statusText.textContent = 'Conectado';
                 statusText.style.color = '#4ecdc4';
 
             } else {
+                // No hay datos
                 tempEl.innerHTML = '--<span class="unit">°C</span>';
                 humEl.innerHTML = '--<span class="unit">%</span>';
                 timeEl.textContent = '⏳ Esperando datos...';
+
                 statusDot.className = 'dot offline';
                 statusText.textContent = 'Sin datos';
                 statusText.style.color = '#ff6b6b';
             }
         });
 
+        // =============================================
+        // 6. MANEJO DE ERRORES DE CONEXIÓN
+        // =============================================
         sensorRef.on('canceled', (error) => {
             console.error('Error en Firebase:', error);
             statusDot.className = 'dot offline';
@@ -305,7 +326,6 @@
         });
 
         console.log('✅ Monitor DHT22 en tiempo real activo');
-        console.log('📡 Conectado a: monitoreo-b8e27');
     </script>
 
 </body>
