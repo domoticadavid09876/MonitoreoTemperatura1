@@ -5,9 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Monitor Clínico</title>
 
-    <script src="https://www.gstatic.com/firebasejs/9.x/firebase-app-compat.js">
+    <!-- Firebase SDK VERSIÓN 9 (COMPAT) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js">
     </script>
-    <script src="https://www.gstatic.com/firebasejs/9.x/firebase-database-compat.js">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js">
     </script>
 
     <style>
@@ -211,7 +212,6 @@
             border-top: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        /* DEBUG */
         .debug-box {
             background: rgba(255, 0, 0, 0.1);
             border: 1px solid rgba(255, 0, 0, 0.3);
@@ -221,7 +221,7 @@
             font-family: monospace;
             font-size: 11px;
             color: #ff6b6b;
-            max-height: 100px;
+            max-height: 120px;
             overflow-y: auto;
             display: none;
         }
@@ -292,7 +292,7 @@
 
     <script>
         // ================================================
-        // CONFIGURACIÓN DE FIREBASE (CORRECTA)
+        // CONFIGURACIÓN DE FIREBASE
         // ================================================
         const firebaseConfig = {
             apiKey: "AIzaSyB9NdqZlkz7kkylnag-gaKEy-R8ju5VKYw",
@@ -310,174 +310,184 @@
         console.log("🚀 Iniciando Firebase...");
 
         try {
+            // Inicializar Firebase
             firebase.initializeApp(firebaseConfig);
             console.log("✅ Firebase inicializado correctamente");
+
+            const db = firebase.database();
+            console.log("✅ Database conectada");
+
+            // Mostrar estado
             document.getElementById('statusText').textContent = 'Firebase OK';
-        } catch (e) {
-            console.error("❌ Error al inicializar Firebase:", e);
-            document.getElementById('statusText').textContent = '❌ Error Firebase';
-            document.getElementById('debugBox').className = 'debug-box show';
-            document.getElementById('debugText').textContent = 'Error: ' + e.message;
-        }
+            document.getElementById('statusText').style.color = '#4ecdc4';
+            document.getElementById('statusDot').className = 'dot online';
 
-        const db = firebase.database();
-        const debugBox = document.getElementById('debugBox');
-        const debugText = document.getElementById('debugText');
+            // ================================================
+            // ELEMENTOS HTML
+            // ================================================
+            const tempEl = document.getElementById('tempValue');
+            const humEl = document.getElementById('humValue');
+            const timeEl = document.getElementById('timestamp');
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            const btnAlerta = document.getElementById('btnAlerta');
+            const debugBox = document.getElementById('debugBox');
+            const debugText = document.getElementById('debugText');
 
-        // ================================================
-        // ELEMENTOS HTML
-        // ================================================
-        const tempEl = document.getElementById('tempValue');
-        const humEl = document.getElementById('humValue');
-        const timeEl = document.getElementById('timestamp');
-        const statusDot = document.getElementById('statusDot');
-        const statusText = document.getElementById('statusText');
-        const btnAlerta = document.getElementById('btnAlerta');
-
-        // ================================================
-        // FUNCIÓN DE DEBUG
-        // ================================================
-        function showDebug(msg) {
-            debugBox.className = 'debug-box show';
-            debugText.textContent = msg;
-            console.log("🔍 " + msg);
-        }
-
-        // ================================================
-        // 1. ESCUCHAR DATOS DEL SENSOR
-        // ================================================
-        const sensorRef = db.ref('/sensores/actual');
-        console.log("📡 Escuchando en: /sensores/actual");
-
-        // Primero, leer una vez para ver si hay datos
-        sensorRef.once('value', (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                showDebug("✅ Datos encontrados: Temp=" + data.temperatura + "°C, Hum=" + data.humedad + "%");
-            } else {
-                showDebug("⚠️ No hay datos en /sensores/actual");
-                showDebug("📌 Verifica que el ESP32 esté enviando datos");
+            // ================================================
+            // FUNCIÓN DE DEBUG
+            // ================================================
+            function showDebug(msg) {
+                debugBox.className = 'debug-box show';
+                debugText.textContent = msg;
+                console.log("🔍 " + msg);
             }
-        });
 
-        // Luego, escuchar cambios en tiempo real
-        sensorRef.on('value', (snapshot) => {
-            const data = snapshot.val();
+            // ================================================
+            // 1. ESCUCHAR DATOS DEL SENSOR
+            // ================================================
+            const sensorRef = db.ref('/sensores/actual');
+            console.log("📡 Escuchando en: /sensores/actual");
 
-            if (data) {
-                // Mostrar temperatura
-                if (data.temperatura !== undefined && data.temperatura !== null) {
-                    tempEl.innerHTML = data.temperatura.toFixed(1) + '<span class="unit">°C</span>';
+            // Verificar si hay datos
+            sensorRef.once('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    showDebug("✅ Datos encontrados: Temp=" + data.temperatura + "°C, Hum=" + data.humedad +
+                        "%");
+                } else {
+                    showDebug("⚠️ No hay datos en /sensores/actual");
+                    showDebug("📌 Verifica que el ESP32 esté enviando datos");
+                }
+            });
+
+            // Escuchar cambios en tiempo real
+            sensorRef.on('value', (snapshot) => {
+                const data = snapshot.val();
+
+                if (data) {
+                    // Mostrar temperatura
+                    if (data.temperatura !== undefined && data.temperatura !== null) {
+                        tempEl.innerHTML = data.temperatura.toFixed(1) + '<span class="unit">°C</span>';
+                    } else {
+                        tempEl.innerHTML = '--<span class="unit">°C</span>';
+                    }
+
+                    // Mostrar humedad
+                    if (data.humedad !== undefined && data.humedad !== null) {
+                        humEl.innerHTML = data.humedad.toFixed(1) + '<span class="unit">%</span>';
+                    } else {
+                        humEl.innerHTML = '--<span class="unit">%</span>';
+                    }
+
+                    // Mostrar timestamp
+                    if (data.timestamp) {
+                        const date = new Date(data.timestamp * 1000);
+                        timeEl.textContent = '🕒 ' + date.toLocaleString('es-ES', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit'
+                        });
+                    } else {
+                        timeEl.textContent = '🕒 ' + new Date().toLocaleString();
+                    }
+
+                    statusDot.className = 'dot online';
+                    statusText.textContent = 'Conectado';
+                    statusText.style.color = '#4ecdc4';
+
+                    showDebug("✅ Datos actualizados: Temp=" + data.temperatura + "°C, Hum=" + data.humedad +
+                        "%");
+
                 } else {
                     tempEl.innerHTML = '--<span class="unit">°C</span>';
-                }
-
-                // Mostrar humedad
-                if (data.humedad !== undefined && data.humedad !== null) {
-                    humEl.innerHTML = data.humedad.toFixed(1) + '<span class="unit">%</span>';
-                } else {
                     humEl.innerHTML = '--<span class="unit">%</span>';
+                    timeEl.textContent = '⏳ Esperando datos...';
+
+                    statusDot.className = 'dot offline';
+                    statusText.textContent = 'Sin datos';
+                    statusText.style.color = '#ff6b6b';
+
+                    showDebug("⚠️ No hay datos en Firebase");
                 }
-
-                // Mostrar timestamp
-                if (data.timestamp) {
-                    const date = new Date(data.timestamp * 1000);
-                    timeEl.textContent = '🕒 ' + date.toLocaleString('es-ES', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit'
-                    });
-                } else {
-                    timeEl.textContent = '🕒 ' + new Date().toLocaleString();
-                }
-
-                statusDot.className = 'dot online';
-                statusText.textContent = 'Conectado';
-                statusText.style.color = '#4ecdc4';
-
-                showDebug("✅ Datos actualizados: Temp=" + data.temperatura + "°C, Hum=" + data.humedad + "%");
-
-            } else {
-                tempEl.innerHTML = '--<span class="unit">°C</span>';
-                humEl.innerHTML = '--<span class="unit">%</span>';
-                timeEl.textContent = '⏳ Esperando datos...';
-
+            }, (error) => {
+                console.error("❌ Error:", error);
+                showDebug("❌ Error: " + error.message);
                 statusDot.className = 'dot offline';
-                statusText.textContent = 'Sin datos';
+                statusText.textContent = 'Error';
                 statusText.style.color = '#ff6b6b';
+            });
 
-                showDebug("⚠️ No hay datos en Firebase");
-            }
-        }, (error) => {
-            console.error("❌ Error:", error);
-            showDebug("❌ Error: " + error.message);
-            statusDot.className = 'dot offline';
-            statusText.textContent = 'Error';
-            statusText.style.color = '#ff6b6b';
-        });
+            // ================================================
+            // 2. ESCUCHAR ESTADO DEL RELÉ
+            // ================================================
+            const alertaRef = db.ref('/alerta/activa');
+            alertaRef.on('value', (snapshot) => {
+                const estado = snapshot.val();
 
-        // ================================================
-        // 2. ESCUCHAR ESTADO DEL RELÉ
-        // ================================================
-        const alertaRef = db.ref('/alerta/activa');
-        alertaRef.on('value', (snapshot) => {
-            const estado = snapshot.val();
+                if (estado === true) {
+                    btnAlerta.className = 'btn-alerta activo';
+                    btnAlerta.innerHTML = `
+                        <span class="icono">🔊</span>
+                        <span>ACTIVADO</span>
+                    `;
+                    showDebug("🔊 Alerta activada");
+                } else if (estado === false) {
+                    btnAlerta.className = 'btn-alerta';
+                    btnAlerta.innerHTML = `
+                        <span class="icono">🔊</span>
+                        <span>ACTIVAR ALERTA</span>
+                    `;
+                }
+            });
 
-            if (estado === true) {
+            // ================================================
+            // 3. EVENTO DEL BOTÓN
+            // ================================================
+            btnAlerta.addEventListener('click', () => {
+                showDebug("🔘 Botón presionado, activando alerta...");
+
                 btnAlerta.className = 'btn-alerta activo';
                 btnAlerta.innerHTML = `
                     <span class="icono">🔊</span>
                     <span>ACTIVADO</span>
                 `;
-                showDebug("🔊 Alerta activada");
-            } else if (estado === false) {
-                btnAlerta.className = 'btn-alerta';
-                btnAlerta.innerHTML = `
-                    <span class="icono">🔊</span>
-                    <span>ACTIVAR ALERTA</span>
-                `;
-            }
-        });
 
-        // ================================================
-        // 3. EVENTO DEL BOTÓN
-        // ================================================
-        btnAlerta.addEventListener('click', () => {
-            showDebug("🔘 Botón presionado, activando alerta...");
+                alertaRef.set(true)
+                    .then(() => {
+                        showDebug("✅ Alerta activada en Firebase");
+                    })
+                    .catch((error) => {
+                        showDebug("❌ Error: " + error.message);
+                    });
+            });
 
-            btnAlerta.className = 'btn-alerta activo';
-            btnAlerta.innerHTML = `
-                <span class="icono">🔊</span>
-                <span>ACTIVADO</span>
-            `;
+            // ================================================
+            // 4. VERIFICAR ESTRUCTURA DE FIREBASE
+            // ================================================
+            db.ref('/').once('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    showDebug("📊 Estructura: " + JSON.stringify(data).substring(0, 80) + "...");
+                } else {
+                    showDebug("⚠️ No hay datos en la raíz");
+                }
+            });
 
-            alertaRef.set(true)
-                .then(() => {
-                    showDebug("✅ Alerta activada en Firebase");
-                })
-                .catch((error) => {
-                    showDebug("❌ Error: " + error.message);
-                });
-        });
+            console.log('✅ Monitor Web Iniciado!');
+            console.log('📡 Conectado a: monitoreo-b8e27');
 
-        // ================================================
-        // 4. VERIFICAR ESTRUCTURA DE FIREBASE
-        // ================================================
-        // Verificar si existe la ruta
-        db.ref('/').once('value', (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                showDebug("📊 Estructura de Firebase: " + JSON.stringify(data).substring(0, 100) + "...");
-            } else {
-                showDebug("⚠️ No hay datos en la raíz de Firebase");
-            }
-        });
-
-        console.log('✅ Monitor Web Iniciado!');
-        console.log('📡 Conectado a: monitoreo-b8e27');
+        } catch (e) {
+            console.error("❌ Error al inicializar Firebase:", e);
+            document.getElementById('statusText').textContent = '❌ Error Firebase';
+            document.getElementById('statusText').style.color = '#ff6b6b';
+            document.getElementById('statusDot').className = 'dot offline';
+            document.getElementById('debugBox').className = 'debug-box show';
+            document.getElementById('debugText').textContent = 'Error: ' + e.message;
+        }
     </script>
 
 </body>
