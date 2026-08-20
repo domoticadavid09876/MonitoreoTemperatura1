@@ -109,7 +109,6 @@
             color: #4ecdc4;
         }
 
-        /* ===== BOTÓN ===== */
         .btn-alerta {
             width: 100%;
             padding: 18px;
@@ -142,11 +141,6 @@
             background: #fc8181;
             color: white;
             animation: pulse 1s infinite;
-        }
-
-        .btn-alerta.desactivado {
-            background: #48bb78;
-            color: white;
         }
 
         @keyframes pulse {
@@ -217,6 +211,25 @@
             border-top: 1px solid rgba(255, 255, 255, 0.05);
         }
 
+        /* DEBUG */
+        .debug-box {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid rgba(255, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 10px;
+            margin-top: 15px;
+            font-family: monospace;
+            font-size: 11px;
+            color: #ff6b6b;
+            max-height: 100px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .debug-box.show {
+            display: block;
+        }
+
         @media (max-width: 480px) {
             .container {
                 padding: 25px 18px;
@@ -241,13 +254,11 @@
         <h1>🏥 Monitor <span>Clínico</span></h1>
         <p class="subtitle">DHT22 · Temperatura &amp; Humedad</p>
 
-        <!-- BOTÓN -->
         <button class="btn-alerta" id="btnAlerta">
             <span class="icono">🔊</span>
             <span>ACTIVAR ALERTA</span>
         </button>
 
-        <!-- SENSORES -->
         <div class="grid">
             <div class="card temp">
                 <span class="icon">🌡️</span>
@@ -261,13 +272,17 @@
             </div>
         </div>
 
-        <!-- ESTADO -->
         <div class="status-bar">
             <div class="status">
                 <span class="dot online" id="statusDot"></span>
                 <span id="statusText">Conectado</span>
             </div>
             <div class="timestamp" id="timestamp">⏳ Esperando datos...</div>
+        </div>
+
+        <div class="debug-box" id="debugBox">
+            <strong>🔍 DEBUG:</strong><br>
+            <span id="debugText">Esperando...</span>
         </div>
 
         <div class="footer">
@@ -277,7 +292,7 @@
 
     <script>
         // ================================================
-        // CONFIGURACIÓN DE FIREBASE
+        // CONFIGURACIÓN DE FIREBASE (CORRECTA)
         // ================================================
         const firebaseConfig = {
             apiKey: "AIzaSyB9NdqZlkz7kkylnag-gaKEy-R8ju5VKYw",
@@ -289,8 +304,25 @@
             appId: "1:824517081045:web:e4cb0cedf0a9715ce52f5c"
         };
 
-        firebase.initializeApp(firebaseConfig);
+        // ================================================
+        // INICIALIZAR FIREBASE
+        // ================================================
+        console.log("🚀 Iniciando Firebase...");
+
+        try {
+            firebase.initializeApp(firebaseConfig);
+            console.log("✅ Firebase inicializado correctamente");
+            document.getElementById('statusText').textContent = 'Firebase OK';
+        } catch (e) {
+            console.error("❌ Error al inicializar Firebase:", e);
+            document.getElementById('statusText').textContent = '❌ Error Firebase';
+            document.getElementById('debugBox').className = 'debug-box show';
+            document.getElementById('debugText').textContent = 'Error: ' + e.message;
+        }
+
         const db = firebase.database();
+        const debugBox = document.getElementById('debugBox');
+        const debugText = document.getElementById('debugText');
 
         // ================================================
         // ELEMENTOS HTML
@@ -303,26 +335,51 @@
         const btnAlerta = document.getElementById('btnAlerta');
 
         // ================================================
-        // VARIABLES
+        // FUNCIÓN DE DEBUG
         // ================================================
-        let alertaActiva = false;
+        function showDebug(msg) {
+            debugBox.className = 'debug-box show';
+            debugText.textContent = msg;
+            console.log("🔍 " + msg);
+        }
 
         // ================================================
-        // ESCUCHAR DATOS DEL SENSOR
+        // 1. ESCUCHAR DATOS DEL SENSOR
         // ================================================
         const sensorRef = db.ref('/sensores/actual');
+        console.log("📡 Escuchando en: /sensores/actual");
+
+        // Primero, leer una vez para ver si hay datos
+        sensorRef.once('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                showDebug("✅ Datos encontrados: Temp=" + data.temperatura + "°C, Hum=" + data.humedad + "%");
+            } else {
+                showDebug("⚠️ No hay datos en /sensores/actual");
+                showDebug("📌 Verifica que el ESP32 esté enviando datos");
+            }
+        });
+
+        // Luego, escuchar cambios en tiempo real
         sensorRef.on('value', (snapshot) => {
             const data = snapshot.val();
 
             if (data) {
-                tempEl.innerHTML = (data.temperatura !== undefined && data.temperatura !== null) ?
-                    data.temperatura.toFixed(1) + '<span class="unit">°C</span>' :
-                    '--<span class="unit">°C</span>';
+                // Mostrar temperatura
+                if (data.temperatura !== undefined && data.temperatura !== null) {
+                    tempEl.innerHTML = data.temperatura.toFixed(1) + '<span class="unit">°C</span>';
+                } else {
+                    tempEl.innerHTML = '--<span class="unit">°C</span>';
+                }
 
-                humEl.innerHTML = (data.humedad !== undefined && data.humedad !== null) ?
-                    data.humedad.toFixed(1) + '<span class="unit">%</span>' :
-                    '--<span class="unit">%</span>';
+                // Mostrar humedad
+                if (data.humedad !== undefined && data.humedad !== null) {
+                    humEl.innerHTML = data.humedad.toFixed(1) + '<span class="unit">%</span>';
+                } else {
+                    humEl.innerHTML = '--<span class="unit">%</span>';
+                }
 
+                // Mostrar timestamp
                 if (data.timestamp) {
                     const date = new Date(data.timestamp * 1000);
                     timeEl.textContent = '🕒 ' + date.toLocaleString('es-ES', {
@@ -333,21 +390,37 @@
                         minute: '2-digit',
                         second: '2-digit'
                     });
+                } else {
+                    timeEl.textContent = '🕒 ' + new Date().toLocaleString();
                 }
 
                 statusDot.className = 'dot online';
                 statusText.textContent = 'Conectado';
                 statusText.style.color = '#4ecdc4';
 
+                showDebug("✅ Datos actualizados: Temp=" + data.temperatura + "°C, Hum=" + data.humedad + "%");
+
             } else {
+                tempEl.innerHTML = '--<span class="unit">°C</span>';
+                humEl.innerHTML = '--<span class="unit">%</span>';
+                timeEl.textContent = '⏳ Esperando datos...';
+
                 statusDot.className = 'dot offline';
                 statusText.textContent = 'Sin datos';
                 statusText.style.color = '#ff6b6b';
+
+                showDebug("⚠️ No hay datos en Firebase");
             }
+        }, (error) => {
+            console.error("❌ Error:", error);
+            showDebug("❌ Error: " + error.message);
+            statusDot.className = 'dot offline';
+            statusText.textContent = 'Error';
+            statusText.style.color = '#ff6b6b';
         });
 
         // ================================================
-        // ESCUCHAR ESTADO DEL RELÉ
+        // 2. ESCUCHAR ESTADO DEL RELÉ
         // ================================================
         const alertaRef = db.ref('/alerta/activa');
         alertaRef.on('value', (snapshot) => {
@@ -359,6 +432,7 @@
                     <span class="icono">🔊</span>
                     <span>ACTIVADO</span>
                 `;
+                showDebug("🔊 Alerta activada");
             } else if (estado === false) {
                 btnAlerta.className = 'btn-alerta';
                 btnAlerta.innerHTML = `
@@ -369,29 +443,41 @@
         });
 
         // ================================================
-        // EVENTO DEL BOTÓN
+        // 3. EVENTO DEL BOTÓN
         // ================================================
         btnAlerta.addEventListener('click', () => {
+            showDebug("🔘 Botón presionado, activando alerta...");
+
             btnAlerta.className = 'btn-alerta activo';
             btnAlerta.innerHTML = `
                 <span class="icono">🔊</span>
                 <span>ACTIVADO</span>
             `;
 
-            // Enviar true a Firebase
             alertaRef.set(true)
                 .then(() => {
-                    console.log('✅ Alerta activada en Firebase');
+                    showDebug("✅ Alerta activada en Firebase");
                 })
                 .catch((error) => {
-                    console.error('❌ Error:', error);
+                    showDebug("❌ Error: " + error.message);
                 });
+        });
 
-            // Desactivar después de 5 segundos (la web se actualizará sola)
+        // ================================================
+        // 4. VERIFICAR ESTRUCTURA DE FIREBASE
+        // ================================================
+        // Verificar si existe la ruta
+        db.ref('/').once('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                showDebug("📊 Estructura de Firebase: " + JSON.stringify(data).substring(0, 100) + "...");
+            } else {
+                showDebug("⚠️ No hay datos en la raíz de Firebase");
+            }
         });
 
         console.log('✅ Monitor Web Iniciado!');
-        console.log('📡 Escuchando en: /sensores/actual y /alerta/activa');
+        console.log('📡 Conectado a: monitoreo-b8e27');
     </script>
 
 </body>
