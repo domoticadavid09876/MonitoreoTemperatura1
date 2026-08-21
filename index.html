@@ -1,298 +1,177 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Monitor Clínico</title>
-
-    <!-- Firebase SDK VERSIÓN 9 (COMPAT) -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js">
-    </script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js">
-    </script>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏥 Monitor Clínico</title>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
             padding: 20px;
         }
-
         .container {
-            background: rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(12px);
-            border-radius: 30px;
+            background: white;
+            border-radius: 25px;
             padding: 40px;
-            max-width: 500px;
+            max-width: 550px;
             width: 100%;
-            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: fadeIn 0.5s ease-in;
         }
-
-        h1 {
-            text-align: center;
-            color: #fff;
-            font-size: 2em;
-            font-weight: 300;
-            letter-spacing: 2px;
-            margin-bottom: 5px;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-
-        h1 span {
-            color: #4fc3f7;
-            font-weight: 600;
-        }
-
-        .subtitle {
-            text-align: center;
-            color: #888;
-            font-size: 0.9em;
-            margin-bottom: 30px;
-            letter-spacing: 1px;
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 25px;
-        }
-
-        .card {
-            background: rgba(255, 255, 255, 0.06);
-            border-radius: 18px;
-            padding: 20px;
-            text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.06);
-        }
-
-        .card .icon {
-            font-size: 2em;
-            display: block;
-            margin-bottom: 5px;
-        }
-
-        .card .label {
-            color: #aaa;
-            font-size: 0.7em;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            font-weight: 600;
-        }
-
-        .card .value {
-            color: #fff;
-            font-size: 2.2em;
-            font-weight: 700;
-            margin-top: 5px;
-        }
-
-        .card .value .unit {
-            font-size: 0.4em;
-            font-weight: 300;
-            color: #888;
-        }
-
-        .card.temp .value {
-            color: #ff6b6b;
-        }
-        .card.hum .value {
-            color: #4ecdc4;
-        }
-
-        .btn-alerta {
-            width: 100%;
-            padding: 18px;
-            border: none;
-            border-radius: 15px;
-            font-size: 18px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            margin-bottom: 20px;
-            background: #e2e8f0;
-            color: #4a5568;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-        }
-
-        .btn-alerta:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.3);
-        }
-
-        .btn-alerta:active {
-            transform: scale(0.96);
-        }
-
-        .btn-alerta.activo {
-            background: #fc8181;
-            color: white;
-            animation: pulse 1s infinite;
-        }
-
-        @keyframes pulse {
-            0%,
-            100% {
-                opacity: 1;
-            }
-            50% {
-                opacity: 0.6;
-            }
-        }
-
-        .btn-alerta .icono {
-            font-size: 24px;
-        }
-
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { color: #2d3748; font-size: 28px; font-weight: 700; }
+        .header .subtitle { color: #718096; font-size: 14px; margin-top: 5px; }
         .status-bar {
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 25px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px 18px;
-            background: rgba(255, 255, 255, 0.04);
-            border-radius: 14px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
             flex-wrap: wrap;
             gap: 10px;
         }
-
-        .status-bar .status {
+        .status-indicator {
             display: flex;
             align-items: center;
-            gap: 10px;
-            color: #aaa;
-            font-size: 0.85em;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 14px;
         }
-
-        .status-bar .status .dot {
-            width: 10px;
-            height: 10px;
+        .status-dot {
+            width: 12px;
+            height: 12px;
             border-radius: 50%;
             display: inline-block;
-            animation: pulse 1.5s infinite;
+            animation: pulse 2s infinite;
         }
-
-        .status-bar .status .dot.online {
-            background: #4ecdc4;
-            box-shadow: 0 0 12px rgba(78, 205, 196, 0.4);
+        .status-dot.online { background: #48bb78; }
+        .status-dot.offline { background: #fc8181; animation: none; }
+        .status-dot.alerta { background: #ed8936; animation: pulse 0.5s infinite; }
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1); }
         }
-
-        .status-bar .status .dot.offline {
-            background: #ff6b6b;
-            box-shadow: 0 0 12px rgba(255, 107, 107, 0.4);
-            animation: none;
+        .sensor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
+        .sensor-card {
+            background: #f7fafc;
+            border-radius: 15px;
+            padding: 20px 25px;
+            text-align: center;
+            transition: all 0.3s ease;
+            border-left: 4px solid #cbd5e0;
         }
-
-        .status-bar .timestamp {
-            color: #666;
-            font-size: 0.8em;
-            font-weight: 300;
+        .sensor-card:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .sensor-card .icon { font-size: 28px; display: block; margin-bottom: 5px; }
+        .sensor-card .label { color: #718096; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+        .sensor-card .value { font-size: 28px; font-weight: 700; color: #2d3748; margin-top: 3px; }
+        .sensor-card .unit { font-size: 14px; font-weight: 400; color: #a0aec0; margin-left: 2px; }
+        .sensor-card.temperatura { border-left-color: #fc8181; }
+        .sensor-card.temperatura .value { color: #e53e3e; }
+        .sensor-card.humedad { border-left-color: #4299e1; }
+        .sensor-card.humedad .value { color: #2b6cb0; }
+        .alerta-box {
+            background: #fed7d7;
+            border: 2px solid #fc8181;
+            border-radius: 12px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            display: none;
+            align-items: center;
+            gap: 12px;
+            animation: shake 0.5s ease-in-out;
         }
-
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .alerta-box.show { display: flex; }
+        .alerta-box .icon { font-size: 28px; }
+        .alerta-box .text { color: #c53030; font-weight: 600; font-size: 15px; }
+        .alerta-box .detail { color: #9b2c2c; font-size: 13px; margin-top: 2px; }
         .footer {
             text-align: center;
-            color: #666;
-            font-size: 0.8em;
-            margin-top: 20px;
-            padding-top: 15px;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            color: #a0aec0;
+            font-size: 13px;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
         }
-
-        .debug-box {
-            background: rgba(255, 0, 0, 0.1);
-            border: 1px solid rgba(255, 0, 0, 0.3);
-            border-radius: 10px;
-            padding: 10px;
-            margin-top: 15px;
-            font-family: monospace;
-            font-size: 11px;
-            color: #ff6b6b;
-            max-height: 120px;
-            overflow-y: auto;
-            display: none;
-        }
-
-        .debug-box.show {
-            display: block;
-        }
-
+        .footer .time { color: #718096; font-weight: 500; }
         @media (max-width: 480px) {
-            .container {
-                padding: 25px 18px;
-            }
-            .grid {
-                grid-template-columns: 1fr 1fr;
-                gap: 10px;
-            }
-            .card .value {
-                font-size: 1.8em;
-            }
-            .btn-alerta {
-                font-size: 16px;
-                padding: 15px;
-            }
+            .container { padding: 25px; }
+            .sensor-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+            .sensor-card .value { font-size: 22px; }
+            .header h1 { font-size: 22px; }
+            .sensor-card { padding: 15px 12px; }
         }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>🏥 Monitor <span>Clínico</span></h1>
-        <p class="subtitle">DHT22 · Temperatura &amp; Humedad</p>
-
-        <button class="btn-alerta" id="btnAlerta">
-            <span class="icono">🔊</span>
-            <span>ACTIVAR ALERTA</span>
-        </button>
-
-        <div class="grid">
-            <div class="card temp">
-                <span class="icon">🌡️</span>
-                <div class="label">Temperatura</div>
-                <div class="value" id="tempValue">--<span class="unit">°C</span></div>
-            </div>
-            <div class="card hum">
-                <span class="icon">💧</span>
-                <div class="label">Humedad</div>
-                <div class="value" id="humValue">--<span class="unit">%</span></div>
-            </div>
+        <div class="header">
+            <h1>🏥 Monitor Clínico</h1>
+            <div class="subtitle">Control de temperatura y humedad</div>
         </div>
 
         <div class="status-bar">
-            <div class="status">
-                <span class="dot online" id="statusDot"></span>
+            <div class="status-indicator">
+                <span class="status-dot online" id="statusDot"></span>
                 <span id="statusText">Conectado</span>
             </div>
-            <div class="timestamp" id="timestamp">⏳ Esperando datos...</div>
+            <div style="font-size:13px; color:#718096;">🔄 Actualizando...</div>
         </div>
 
-        <div class="debug-box" id="debugBox">
-            <strong>🔍 DEBUG:</strong><br>
-            <span id="debugText">Esperando...</span>
+        <div class="alerta-box" id="alertaBox">
+            <span class="icon">⚠️</span>
+            <div>
+                <div class="text" id="alertaText">¡Temperatura fuera de rango!</div>
+                <div class="detail" id="alertaDetail">Por favor revisa el sistema</div>
+            </div>
+        </div>
+
+        <div class="sensor-grid">
+            <div class="sensor-card temperatura">
+                <span class="icon">🌡️</span>
+                <div class="label">Temperatura</div>
+                <div class="value"><span id="tempValue">--</span><span class="unit">°C</span></div>
+            </div>
+            <div class="sensor-card humedad">
+                <span class="icon">💧</span>
+                <div class="label">Humedad</div>
+                <div class="value"><span id="humValue">--</span><span class="unit">%</span></div>
+            </div>
         </div>
 
         <div class="footer">
-            <span>🔊 Alerta sonora: 5 segundos</span>
+            Última actualización: <span class="time" id="lastUpdate">--:--:--</span>
+            <br>
+            <span style="font-size:11px; color:#cbd5e0;">Datos en tiempo real desde Firebase</span>
         </div>
     </div>
 
     <script>
         // ================================================
-        // CONFIGURACIÓN DE FIREBASE
+        // CONFIGURACIÓN CORRECTA DE FIREBASE
         // ================================================
         const firebaseConfig = {
             apiKey: "AIzaSyB9NdqZlkz7kkylnag-gaKEy-R8ju5VKYw",
@@ -304,190 +183,122 @@
             appId: "1:824517081045:web:e4cb0cedf0a9715ce52f5c"
         };
 
-        // ================================================
-        // INICIALIZAR FIREBASE
-        // ================================================
         console.log("🚀 Iniciando Firebase...");
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        console.log("✅ Firebase inicializado");
 
-        try {
-            // Inicializar Firebase
-            firebase.initializeApp(firebaseConfig);
-            console.log("✅ Firebase inicializado correctamente");
+        // ================================================
+        // ELEMENTOS HTML
+        // ================================================
+        const tempElement = document.getElementById('tempValue');
+        const humElement = document.getElementById('humValue');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const lastUpdate = document.getElementById('lastUpdate');
+        const alertaBox = document.getElementById('alertaBox');
+        const alertaText = document.getElementById('alertaText');
+        const alertaDetail = document.getElementById('alertaDetail');
 
-            const db = firebase.database();
-            console.log("✅ Database conectada");
+        const TEMP_MIN = 20;
+        const TEMP_MAX = 28;
 
-            // Mostrar estado
-            document.getElementById('statusText').textContent = 'Firebase OK';
-            document.getElementById('statusText').style.color = '#4ecdc4';
-            document.getElementById('statusDot').className = 'dot online';
+        // ================================================
+        // ESCUCHAR CAMBIOS EN TIEMPO REAL
+        // ================================================
+        const sensorRef = database.ref('/sensores/actual');
+        console.log("📡 Escuchando en: /sensores/actual");
 
-            // ================================================
-            // ELEMENTOS HTML
-            // ================================================
-            const tempEl = document.getElementById('tempValue');
-            const humEl = document.getElementById('humValue');
-            const timeEl = document.getElementById('timestamp');
-            const statusDot = document.getElementById('statusDot');
-            const statusText = document.getElementById('statusText');
-            const btnAlerta = document.getElementById('btnAlerta');
-            const debugBox = document.getElementById('debugBox');
-            const debugText = document.getElementById('debugText');
+        sensorRef.on('value', (snapshot) => {
+            const data = snapshot.val();
+            console.log("📥 Datos recibidos:", data);
 
-            // ================================================
-            // FUNCIÓN DE DEBUG
-            // ================================================
-            function showDebug(msg) {
-                debugBox.className = 'debug-box show';
-                debugText.textContent = msg;
-                console.log("🔍 " + msg);
+            if (data) {
+                // Mostrar temperatura
+                if (data.temperatura !== undefined && data.temperatura !== null) {
+                    tempElement.textContent = data.temperatura.toFixed(1);
+                } else {
+                    tempElement.textContent = '--';
+                }
+
+                // Mostrar humedad
+                if (data.humedad !== undefined && data.humedad !== null) {
+                    humElement.textContent = data.humedad.toFixed(1);
+                } else {
+                    humElement.textContent = '--';
+                }
+
+                // Actualizar timestamp
+                const now = new Date();
+                lastUpdate.textContent = now.toLocaleTimeString();
+
+                // Estado: online
+                statusDot.className = 'status-dot online';
+                statusText.textContent = '✅ Conectado';
+                statusText.style.color = '#48bb78';
+
+                // Verificar alertas
+                const temp = data.temperatura;
+                if (temp !== undefined && temp !== null) {
+                    if (temp > TEMP_MAX) {
+                        alertaBox.className = 'alerta-box show';
+                        alertaText.textContent = `🔥 ¡Temperatura Alta! ${temp.toFixed(1)}°C`;
+                        alertaDetail.textContent = '⚠️ Revisa el sistema de climatización';
+                        statusDot.className = 'status-dot alerta';
+                        statusText.textContent = '⚠️ ALERTA';
+                        statusText.style.color = '#ed8936';
+                    } else if (temp < TEMP_MIN) {
+                        alertaBox.className = 'alerta-box show';
+                        alertaText.textContent = `❄️ ¡Temperatura Baja! ${temp.toFixed(1)}°C`;
+                        alertaDetail.textContent = '⚠️ Revisa el sistema de calefacción';
+                        statusDot.className = 'status-dot alerta';
+                        statusText.textContent = '⚠️ ALERTA';
+                        statusText.style.color = '#ed8936';
+                    } else {
+                        alertaBox.className = 'alerta-box';
+                    }
+                }
+
+            } else {
+                statusDot.className = 'status-dot offline';
+                statusText.textContent = '🔄 Sin datos...';
+                statusText.style.color = '#fc8181';
+                tempElement.textContent = '--';
+                humElement.textContent = '--';
+                alertaBox.className = 'alerta-box';
+                console.log("⚠️ No hay datos en Firebase");
             }
+        }, (error) => {
+            console.error('❌ Error al leer datos:', error);
+            statusDot.className = 'status-dot offline';
+            statusText.textContent = '❌ Error de conexión';
+            statusText.style.color = '#fc8181';
+        });
 
-            // ================================================
-            // 1. ESCUCHAR DATOS DEL SENSOR
-            // ================================================
-            const sensorRef = db.ref('/sensores/actual');
-            console.log("📡 Escuchando en: /sensores/actual");
+        // ================================================
+        // DETECTAR SI ESP32 ESTÁ OFFLINE
+        // ================================================
+        let timeoutId = setTimeout(() => {
+            if (tempElement.textContent === '--') {
+                statusDot.className = 'status-dot offline';
+                statusText.textContent = '🔴 ESP32 Offline';
+                statusText.style.color = '#fc8181';
+            }
+        }, 15000);
 
-            // Verificar si hay datos
-            sensorRef.once('value', (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    showDebug("✅ Datos encontrados: Temp=" + data.temperatura + "°C, Hum=" + data.humedad +
-                        "%");
-                } else {
-                    showDebug("⚠️ No hay datos en /sensores/actual");
-                    showDebug("📌 Verifica que el ESP32 esté enviando datos");
+        sensorRef.on('value', () => {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                if (tempElement.textContent === '--') {
+                    statusDot.className = 'status-dot offline';
+                    statusText.textContent = '🔴 ESP32 Offline';
+                    statusText.style.color = '#fc8181';
                 }
-            });
+            }, 15000);
+        });
 
-            // Escuchar cambios en tiempo real
-            sensorRef.on('value', (snapshot) => {
-                const data = snapshot.val();
-
-                if (data) {
-                    // Mostrar temperatura
-                    if (data.temperatura !== undefined && data.temperatura !== null) {
-                        tempEl.innerHTML = data.temperatura.toFixed(1) + '<span class="unit">°C</span>';
-                    } else {
-                        tempEl.innerHTML = '--<span class="unit">°C</span>';
-                    }
-
-                    // Mostrar humedad
-                    if (data.humedad !== undefined && data.humedad !== null) {
-                        humEl.innerHTML = data.humedad.toFixed(1) + '<span class="unit">%</span>';
-                    } else {
-                        humEl.innerHTML = '--<span class="unit">%</span>';
-                    }
-
-                    // Mostrar timestamp
-                    if (data.timestamp) {
-                        const date = new Date(data.timestamp * 1000);
-                        timeEl.textContent = '🕒 ' + date.toLocaleString('es-ES', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit'
-                        });
-                    } else {
-                        timeEl.textContent = '🕒 ' + new Date().toLocaleString();
-                    }
-
-                    statusDot.className = 'dot online';
-                    statusText.textContent = 'Conectado';
-                    statusText.style.color = '#4ecdc4';
-
-                    showDebug("✅ Datos actualizados: Temp=" + data.temperatura + "°C, Hum=" + data.humedad +
-                        "%");
-
-                } else {
-                    tempEl.innerHTML = '--<span class="unit">°C</span>';
-                    humEl.innerHTML = '--<span class="unit">%</span>';
-                    timeEl.textContent = '⏳ Esperando datos...';
-
-                    statusDot.className = 'dot offline';
-                    statusText.textContent = 'Sin datos';
-                    statusText.style.color = '#ff6b6b';
-
-                    showDebug("⚠️ No hay datos en Firebase");
-                }
-            }, (error) => {
-                console.error("❌ Error:", error);
-                showDebug("❌ Error: " + error.message);
-                statusDot.className = 'dot offline';
-                statusText.textContent = 'Error';
-                statusText.style.color = '#ff6b6b';
-            });
-
-            // ================================================
-            // 2. ESCUCHAR ESTADO DEL RELÉ
-            // ================================================
-            const alertaRef = db.ref('/alerta/activa');
-            alertaRef.on('value', (snapshot) => {
-                const estado = snapshot.val();
-
-                if (estado === true) {
-                    btnAlerta.className = 'btn-alerta activo';
-                    btnAlerta.innerHTML = `
-                        <span class="icono">🔊</span>
-                        <span>ACTIVADO</span>
-                    `;
-                    showDebug("🔊 Alerta activada");
-                } else if (estado === false) {
-                    btnAlerta.className = 'btn-alerta';
-                    btnAlerta.innerHTML = `
-                        <span class="icono">🔊</span>
-                        <span>ACTIVAR ALERTA</span>
-                    `;
-                }
-            });
-
-            // ================================================
-            // 3. EVENTO DEL BOTÓN
-            // ================================================
-            btnAlerta.addEventListener('click', () => {
-                showDebug("🔘 Botón presionado, activando alerta...");
-
-                btnAlerta.className = 'btn-alerta activo';
-                btnAlerta.innerHTML = `
-                    <span class="icono">🔊</span>
-                    <span>ACTIVADO</span>
-                `;
-
-                alertaRef.set(true)
-                    .then(() => {
-                        showDebug("✅ Alerta activada en Firebase");
-                    })
-                    .catch((error) => {
-                        showDebug("❌ Error: " + error.message);
-                    });
-            });
-
-            // ================================================
-            // 4. VERIFICAR ESTRUCTURA DE FIREBASE
-            // ================================================
-            db.ref('/').once('value', (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    showDebug("📊 Estructura: " + JSON.stringify(data).substring(0, 80) + "...");
-                } else {
-                    showDebug("⚠️ No hay datos en la raíz");
-                }
-            });
-
-            console.log('✅ Monitor Web Iniciado!');
-            console.log('📡 Conectado a: monitoreo-b8e27');
-
-        } catch (e) {
-            console.error("❌ Error al inicializar Firebase:", e);
-            document.getElementById('statusText').textContent = '❌ Error Firebase';
-            document.getElementById('statusText').style.color = '#ff6b6b';
-            document.getElementById('statusDot').className = 'dot offline';
-            document.getElementById('debugBox').className = 'debug-box show';
-            document.getElementById('debugText').textContent = 'Error: ' + e.message;
-        }
+        console.log('✅ Monitor Web Iniciado!');
+        console.log('📡 Conectado a: monitoreo-b8e27');
     </script>
 
 </body>
